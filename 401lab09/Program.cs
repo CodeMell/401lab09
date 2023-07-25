@@ -1,78 +1,79 @@
-﻿using System;
+﻿using Newtonsoft.Json;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using Newtonsoft.Json;
 
-public class FeatureCollection
+namespace ManhattanNeighborhoods
 {
-    public List<Feature> Features { get; set; }
-}
-
-public class Feature
-{
-    public Geometry Geometry { get; set; }
-    public Properties Properties { get; set; }
-}
-
-public class Geometry
-{
-    public string Type { get; set; }
-    public List<double> Coordinates { get; set; }
-}
-
-public class Properties
-{
-    public string Zip { get; set; }
-    public string City { get; set; }
-    public string State { get; set; }
-    public string Address { get; set; }
-    public string Borough { get; set; }
-    public string Neighborhood { get; set; }
-    public string County { get; set; }
-}
-
-class Program
-{
-    static void Main()
+    class Program
     {
-        string jsonFilePath = "data.json";
-        string jsonData = File.ReadAllText(jsonFilePath);
+        static void Main(string[] args)
+        {
+            string jsonFilePath = "data.json";
+            string jsonData = File.ReadAllText(jsonFilePath);
 
-        FeatureCollection featureCollection = JsonConvert.DeserializeObject<FeatureCollection>(jsonData);
+            // Deserialize JSON data into C# objects
+            RootObject rootObject = JsonConvert.DeserializeObject<RootObject>(jsonData);
 
-        // Question 1: Output all of the neighborhoods in this data list
-        List<string> allNeighborhoods = featureCollection.Features.Select(f => f.Properties.Neighborhood).ToList();
-        Console.WriteLine($"Question 1: Total neighborhoods: {allNeighborhoods.Count}, Neighborhoods: {string.Join(", ", allNeighborhoods)}");
+            // Extract the features list from the root object
+            List<Feature> features = rootObject.features;
 
-        // Question 2: Filter out all the neighborhoods that do not have any names
-        List<string> neighborhoodsWithNames = featureCollection.Features
-            .Where(f => !string.IsNullOrEmpty(f.Properties.Neighborhood))
-            .Select(f => f.Properties.Neighborhood)
-            .ToList();
-        Console.WriteLine($"Question 2: Total neighborhoods with names: {neighborhoodsWithNames.Count}, Neighborhoods: {string.Join(", ", neighborhoodsWithNames)}");
+            // Perform LINQ queries
+            var neighborhoods = features.Select(f => f.properties.neighborhood).ToList();
+            var neighborhoodsWithNames = neighborhoods.Where(neigh => !string.IsNullOrEmpty(neigh)).ToList();
+            var uniqueNeighborhoods = neighborhoodsWithNames.Distinct().ToList();
+            var consolidatedQuery = features
+                .Select(f => f.properties.neighborhood)
+                .Where(neigh => !string.IsNullOrEmpty(neigh))
+                .Distinct()
+                .ToList();
 
-        // Question 3: Remove duplicates
-        List<string> uniqueNeighborhoods = featureCollection.Features
-            .Where(f => !string.IsNullOrEmpty(f.Properties.Neighborhood))
-            .Select(f => f.Properties.Neighborhood)
-            .Distinct()
-            .ToList();
-        Console.WriteLine($"Question 3: Total unique neighborhoods: {uniqueNeighborhoods.Count}, Neighborhoods: {string.Join(", ", uniqueNeighborhoods)}");
+            // Output the results to the console
+            Console.WriteLine("Question 1 - All neighborhoods:");
+            PrintList(neighborhoods);
 
-        // Question 4: Rewrite the queries and consolidate into one
-        List<string> allNeighborhoodsConsolidated = featureCollection.Features
-            .Where(f => !string.IsNullOrEmpty(f.Properties.Neighborhood))
-            .Select(f => f.Properties.Neighborhood)
-            .ToList();
-        List<string> uniqueNeighborhoodsConsolidated = allNeighborhoodsConsolidated.Distinct().ToList();
+            Console.WriteLine("\nQuestion 2 - Neighborhoods with names:");
+            PrintList(neighborhoodsWithNames);
 
-        Console.WriteLine($"Question 4: Total neighborhoods: {allNeighborhoodsConsolidated.Count}, Total unique neighborhoods: {uniqueNeighborhoodsConsolidated.Count}");
+            Console.WriteLine("\nQuestion 3 - Unique neighborhoods:");
+            PrintList(uniqueNeighborhoods);
 
-        // Question 5: Rewrite using the opposing method (Method Syntax -> Query Syntax)
-        List<string> neighborhoodsWithNamesQuerySyntax = (from f in featureCollection.Features
-                                                          where !string.IsNullOrEmpty(f.Properties.Neighborhood)
-                                                          select f.Properties.Neighborhood).ToList();
-        Console.WriteLine($"Question 5: Total neighborhoods with names using Query Syntax: {neighborhoodsWithNamesQuerySyntax.Count}, Neighborhoods: {string.Join(", ", neighborhoodsWithNamesQuerySyntax)}");
+            Console.WriteLine("\nQuestion 4 - Consolidated query:");
+            PrintList(consolidatedQuery);
+
+            Console.WriteLine("\nQuestion 5 - Using LINQ Query syntax:");
+            var neighborhoodsQuerySyntax = (from f in features
+                                            where !string.IsNullOrEmpty(f.properties.neighborhood)
+                                            select f.properties.neighborhood)
+                                           .Distinct()
+                                           .ToList();
+            PrintList(neighborhoodsQuerySyntax);
+        }
+
+        static void PrintList(List<string> list)
+        {
+            foreach (var item in list)
+            {
+                Console.WriteLine(item);
+            }
+            Console.WriteLine($"Final Total: {list.Count} neighborhoods");
+        }
+    }
+
+    // Define classes that match the structure of the JSON data
+    class RootObject
+    {
+        public List<Feature> features { get; set; }
+    }
+
+    class Feature
+    {
+        public Properties properties { get; set; }
+    }
+
+    class Properties
+    {
+        public string neighborhood { get; set; }
     }
 }
